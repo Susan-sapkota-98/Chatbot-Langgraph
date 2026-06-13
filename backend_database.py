@@ -4,8 +4,12 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_ollama import ChatOllama
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
+from dotenv import load_dotenv
 import sqlite3
 
+
+
+load_dotenv()
 llm = ChatOllama(model="llama3")
 
 class ChatState(TypedDict):
