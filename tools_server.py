@@ -1,11 +1,49 @@
 # tools_server.py
 from mcp.server.fastmcp import FastMCP
+from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
 from serpapi import GoogleSearch
 from dotenv import load_dotenv
-import os
+import chromadb, os
 
 load_dotenv()
 mcp = FastMCP("MyTools")
+
+CHROMA_PATH = "./chroma_db"
+
+
+def get_vectorstore():
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    client = chromadb.PersistentClient(path=CHROMA_PATH)
+    return Chroma(
+        client=client,
+        collection_name="documents",
+        embedding_function=embeddings
+    )
+
+
+@mcp.tool()
+def rag_search(query: str) -> str:
+    """
+    Search through user-uploaded documents to answer questions.
+    Use this when the user asks about documents they have uploaded.
+    """
+    try:
+        vectorstore = get_vectorstore()
+        results = vectorstore.similarity_search(query, k=4)
+
+        if not results:
+            return "No relevant content found in uploaded documents."
+
+        output = []
+        for i, doc in enumerate(results, 1):
+            source = doc.metadata.get("source", "Unknown")
+            output.append(f"[{i}] Source: {source}\n{doc.page_content}")
+
+        return "\n\n".join(output)
+
+    except Exception as e:
+        return f"RAG search error: {str(e)}"
 
 
 @mcp.tool()
@@ -84,4 +122,4 @@ def get_stock_price(symbol: str) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run()  # stdio transport by default
+    mcp.run()
